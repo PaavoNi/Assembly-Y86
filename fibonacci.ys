@@ -1,20 +1,6 @@
-# Paavo Nikkari, 2208214, paavo.nikkari@student.oulu.fi
-#
-# Pohdinta:
-#
-# Käskyjen määrä: 
-#   isFibonacci-silmukka (6 iteraatiota, joista 5 Fibonaccin lukuja ja yksi 0):
-#   5 Fibonaccin luvulle 5(*30+15)=225 ja viimeiselle luvulle 31, eli 256.
-#   Kertolaskulle: 1430
-#   neliöjuurelle: 1785
-#   bittisiirroille: 13725, aika paljon...
-#   vähennykselle: 225
-#   loppu: 2
-#
-# Näistä kokonaisuudessaan käskyjä kertyy arviolta noin 18 000 lisättäen alustuskäskyt ym.
-# Optimoinnille olisi tilaa varmasti bittisiirroissa. Ne voisi ehkä yhdistää, mutta koin helpommaksi tehdä näin. 
-# Lisäksi sqrt aiheuttaa todella paljon käskyjä. Ainakin turhia rekisterin nollauksia voisi sieltä karsia.
-# Optimointi vaatisi analysointia ja pohdintaa enemmänkin, mutta nyt on valitettavasti siirryttävä joulun viettoon.
+# Paavo Nikkari
+# Computer systems assembly part
+
 
 
 main:
