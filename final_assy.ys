@@ -1,0 +1,232 @@
+# Paavo Nikkari, 2208214, paavo.nikkari@student.oulu.fi
+#
+# Pohdinta:
+#
+# Käskyjen määrä: 
+#   isFibonacci-silmukka (6 iteraatiota, joista 5 Fibonaccin lukuja ja yksi 0):
+#   5 Fibonaccin luvulle 5(*30+15)=225 ja viimeiselle luvulle 31, eli 256.
+#   Kertolaskulle: 1430
+#   neliöjuurelle: 1785
+#   bittisiirroille: 13725, aika paljon...
+#   vähennykselle: 225
+#   loppu: 2
+#
+# Näistä kokonaisuudessaan käskyjä kertyy arviolta noin 18 000 lisättäen alustuskäskyt ym.
+# Optimoinnille olisi tilaa varmasti bittisiirroissa. Ne voisi ehkä yhdistää, mutta koin helpommaksi tehdä näin. 
+# Lisäksi sqrt aiheuttaa todella paljon käskyjä. Ainakin turhia rekisterin nollauksia voisi sieltä karsia.
+# Optimointi vaatisi analysointia ja pohdintaa enemmänkin, mutta nyt on valitettavasti siirryttävä joulun viettoon.
+
+
+main:
+    irmovq 0x0700,%rsp  # pinon osoitin (0x0700)
+    irmovq 0x0700,%rbp  # pohjaosoitin (0x0700)
+
+isFibonacci:
+    irmovq $0, %r10   # Nollataan rekisterit
+    irmovq $0, %rdx
+    irmovq $0, %r12
+    irmovq $0, %r11
+    irmovq $0, %r13
+    irmovq $0, %r14
+    irmovq $0, %rbx
+    irmovq $0, %rax
+    irmovq $0, %rdi
+    irmovq $0, %rcx
+    irmovq $0, %r8
+    irmovq $0, %r9
+    popq %r12        # luku pinosta
+    subq %rdx, %r12  # Tarkista, onko pino tyhjä
+    je ready         # Jos tyhjä, hyppää ready-kohtaan
+    pushq %r12       # Laita luku takaisin pinoon
+    rrmovq %r12, %r11 # %r11 = luku
+    call multiSubr   # %r11 * %r12 tulos %rax:ssa
+    rrmovq %rax, %r11 # %r11 = tulos
+    irmovq $5, %r12   # %r12 = 5
+    call multiSubr   # %r11 * %r12 (tulos * 5)
+    rrmovq %rax, %r10 # %r10 = tulos
+    irmovq $4, %rbx   # %rbx = 4
+    addq %rbx, %r10  # %r10 = tulos + 4 (5 * luku * luku + 4)
+    jmp isPerfect    # Hyppää isPerfect
+
+isPerfect:
+    rrmovq %r10, %r12 # %r12 = luku (5 * luku * luku + 4)
+    call sqrt        # Lasketaan neliöjuuri
+    rrmovq %rcx,%r12  # %r12 = neliöjuuri
+    rrmovq %rcx,%r11  # %r11 = neliöjuuri
+    call multiSubr   # %r11 * %r12 (neliöjuuri * neliöjuuri)
+    rrmovq %r10, %r9  # %r9 = alkuperäinen luku
+    subq %rax,%r9    # %r9 = alkuperäinen - neliöjuuri
+    jne notZero      # Jos erisuuri, hyppää notZero
+    je firstZero     # Jos yhtäsuuri, hyppää firstZero
+
+firstZero:
+    irmovq $8, %rbx   # %rbx = 8
+    subq %rbx, %r10  # %r10 = 5 * luku * luku - 4
+    rrmovq %r10, %r12 # %r12 = luku (5 * luku * luku - 4)
+    call sqrt        # Lasketaan neliöjuuri
+    rrmovq %rcx, %r11 # %r11 = neliöjuuri
+    rrmovq %rcx, %r12 # %r12 = neliöjuuri
+    call multiSubr   # %r11 * %r12 (neliöjuuri * neliöjuuri)
+    rrmovq %r10, %r9  # %r9 = alkuperäinen luku
+    subq %rax, %r9   # %r9 = alkuperäinen - neliöjuuri
+    je putZero       # Jos yhtäsuuri, hyppää putZero
+    jne putZero      # Jos erisuuri, hyppää putZero
+
+notZero:
+    irmovq $8, %rbx   # %rbx = 8
+    subq %rbx, %r10  # %r10 = 5 * luku * luku - 4
+    rrmovq %r10, %r12 # %r12 = luku (5 * luku * luku - 4)
+    call sqrt        # Lasketaan neliöjuuri
+    rrmovq %rcx, %r11 # %r11 = neliöjuuri
+    rrmovq %rcx, %r12 # %r12 = neliöjuuri
+    call multiSubr   # %r11 * %r12 (neliöjuuri * neliöjuuri)
+    rrmovq %r10, %r9  # %r9 = alkuperäinen luku
+    subq %rax, %r9   # %r9 = alkuperäinen - neliöjuuren neliö
+    je putZero       # Jos yhtäsuuri hyppää putZero
+    jne notFibonacci # Jos erisuuri hyppää notFibonacci
+
+putZero:
+    popq %r12        # Hae seuraava luku pinosta
+    jmp isFibonacci # Hyppää takaisin isFibonacci-kohtaan
+
+notFibonacci:
+    popq %r12        # Hae ei-Fibonaccin luku pinosta
+    rrmovq %r12, %rax # %rax = ei-Fibonaccin luku
+    halt             # Lopeta
+
+ready:
+    irmovq $0, %rax  # %rax = 0 (kaikki luvut Fibonaccin lukuja)
+    halt             # Lopeta
+
+.pos 0x400
+multiSubr:          # Kertolaskualiohjelma: %r12 * %r11
+    irmovq $0x0001, %rbx # %rbx = 1 (bitti)
+    irmovq $0, %rdx   # %rdx = 0
+    irmovq $0, %rax   # %rax = 0 (tulos)
+    irmovq $0, %rsi   # %rsi = 0
+    irmovq $0, %r13   # %r13 = 0
+
+multi:
+    rrmovq %rbx, %rsi # %rsi = %rbx
+    andq %r11, %rsi  # %rsi = %rbx AND %r11
+    subq %rdx, %rsi  # Onko bitti 1?
+    je bitShift      # Jos ei, hyppää bitShift
+    addq %r12, %rax  # Jos on, lisää %r12 tulokseen
+
+bitShift:
+    rrmovq %rbx, %r13 # %r13 = %rbx
+    addq %rbx, %rbx  # Siirrä bittiä vasemmalle (%rbx * 2)
+    addq %r12, %r12  # %r12 * 2
+    subq %rbx, %r13  # Onko ylivuotoa?
+    jl multi         # Jos ei, jatka kertolaskua
+    ret              # Jos on, palauta tulos
+
+.pos 0x500
+sqrt:               # Neliöjuurialiohjelma: %r12, tulos %rcx:ssa
+    irmovq $0, %rcx   # %rcx = 0 (tulos)
+    irmovq $16777216, %r9 # %r9 = suurin mahdollinen neliöjuuren arvo (2^24)
+    irmovq $0,%rdx    # %rdx = 0
+    irmovq $1,%rbx    # %rbx = 1
+    irmovq $0,%r13    # %r13 = 0
+    irmovq $0,%rdi    # %rdi = 0
+    irmovq $0,%r14    # %r14 = 0
+    irmovq $0,%r11    # %r11 = 0
+    irmovq $0,%rsi    # %rsi = 0
+    irmovq $0,%rax    # %rax = 0
+    irmovq $0,%r8     # %r8 = 0
+    jmp subtract     # Hyppää subtract-kohtaan
+
+subtract:
+    rrmovq %r12,%r13  # %r13 = luku
+    subq %r9,%r13    # %r13 = luku - %r9
+    jge unequal      # Jos luku >= %r9, hyppää unequal
+shift:
+    call bitShiftTwoConst # Siirrä %r9:ää 2 bittiä oikealle
+    jmp subtract     # Hyppää subtract
+
+unequal:
+    irmovq $0, %rdi   # %rdi = 0
+    addq %r9, %rdi   # %rdi = %r9
+    addq %rcx, %rdi   # %rdi = %r9 + %rcx
+    rrmovq %r12,%r13  # %r13 = luku
+    subq %rdi,%r13    # %r13 = luku - (%r9 + %rcx)
+    jge if           # Jos luku >= (%r9 + %rcx), hyppää if
+    jl else          # Jos luku < (%r9 + %rcx), hyppää else
+
+else:
+    call bitShiftOneConst  # Siirrä %r9:ää 1 bitti oikealle
+    call bitShiftTwoConst  # Siirrä %r9:ää 2 bittiä oikealle
+    subq %rdx,%r9      # Nollaa %r9:n alimmat bitit tarvittaessa
+    je end             # Jos %r9 on nolla, hyppää end
+    jmp unequal        # Hyppää unequal
+
+if:
+    call subtraction    # Vähennä luvusta %rcx ja %r9
+    call bitShiftOneConst  # Siirrä %r9:ää 1 bitti oikealle
+    addq %r9,%rcx      # Lisää %r9 tulokseen (%rcx)
+    call bitShiftTwoConst  # Siirrä %r9:ää 2 bittiä oikealle
+    subq %rdx,%r9      # Nollaa %r9:n alimmat bitit tarvittaessa
+    je end             # Jos %r9 on nolla, hyppää end
+    jmp unequal        # Hyppää unequal
+
+end:
+    ret                # Palauta neliöjuuri
+
+.pos 0xa00
+subtraction:           # Vähennyslaskualiohjelma: %r12 = %r12 - %rcx - %r9
+    subq %rcx, %r12
+    subq %r9, %r12
+    ret
+
+.pos 0xc00
+bitShiftOneConst:       # Siirrä %r9:ää 1 bitti oikealle (vakioilla)
+    irmovq $0x0002, %r14 # %r14 = 2
+    irmovq $0x0001, %r11 # %r11 = 1
+    irmovq $0, %rsi   # %rsi = 0
+    irmovq 0xfffffffff, %rax # %rax = maski (jossa kaikki bitit 1)
+bitShiftOne:
+    irmovq $0, %r8    # %r8 = 0
+    rrmovq %r14, %r8  # %r8 = %r14
+    subq %rax, %r8   # Onko ylivuotoa?
+    jg stop          # Jos on, hyppää stop
+    rrmovq %r14,%r8   # %r8 = %r14
+    andq %rcx,%r8    # %r8 = %r14 AND %rcx
+    subq %rdx,%r8    # Onko bitti 1?
+    je addition      # Jos on, hyppää addition
+shifting:
+    addq %r11,%rsi   # Lisää 1 %rsi:hin
+addition:
+    addq %r14,%r14   # %r14 * 2
+    addq %r11,%r11   # %r11 * 2
+    jmp bitShiftOne  # Hyppää bitShiftOne
+stop:
+    rrmovq %rsi,%rcx  # %rcx = %rsi (tulos)
+    ret
+
+.pos 0x800
+bitShiftTwoConst:      # Siirrä %r9:ää 2 bittiä oikealle (vakioilla)
+    irmovq $0x0004, %r14 # %r14 = 4
+    irmovq $0x0001, %r11 # %r11 = 1
+    irmovq 0xfffffffff, %rax # %rax = maski
+    irmovq $0,%rsi    # %rsi = 0
+bitShiftTwo:
+    irmovq $0, %r8    # %r8 = 0
+    rrmovq %r14, %r8  # %r8 = %r14
+    subq %rax, %r8   # Onko ylivuotoa?
+    jg ending        # Jos on, hyppää ending
+    rrmovq %r14,%r8   # %r8 = %r14
+    andq %r9,%r8    # %r8 = %r14 AND %r9
+    subq %rdx,%r8    # Onko bitti 1?
+    je additionTwo   # Jos on, hyppää additionTwo
+shiftingTwo:
+    addq %r11,%rsi   # Lisää 1 %rsi:hin
+additionTwo:
+    addq %r14,%r14   # %r14 * 2
+    addq %r11,%r11   # %r11 * 2
+    jmp bitShiftTwo  # Hyppää bitShiftTwo
+ending:
+    rrmovq %rsi,%r9  # %r9 = %rsi (tulos)
+    ret
+
+.pos 0x0700
+array: # Taulukon data
